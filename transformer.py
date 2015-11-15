@@ -140,7 +140,7 @@ def FormatData(data):
                 day = date[1]
                 datastring += year + "-" + month + "-" + day + ","
             elif attrIndex == 10: # Time
-                ConvertTime(point[attrIndex]) + ","
+                datastring += ConvertTime(point[attrIndex]) + ","
             elif attrIndex == 20: # No comma
                 datastring += "\"" + point[attrIndex].strip() + "\"\n"
             elif attrIndex == 3 and point[attrIndex] == "":
