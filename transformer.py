@@ -120,16 +120,15 @@ def ConvertTime(time):
     return time
 
 def ConvertDate(date):
-    date = point[attrIndex].split('/')
-    if(int(date[0]) < 10):
-        if(len(date[0]) < 2):
-            month = "0" + date[0]
-        else:
-            month = date[0]
-            day = date[1]
-    converted_date = month + "-" + date
-    if converted_date == "11-31":
-        print(date)
+    split_date = date.split('/')
+    month = split_date[0]
+    day = split_date[1]
+    if(int(split_date[0]) < 10):
+        if(len(split_date[0]) < 2):
+            month = "0" + split_date[0]
+    converted_date = month + "-" + day
+    if converted_date == "02-29": # Weka doesn't like leap days
+        converted_date = "02-28"
 
     return converted_date
 
@@ -173,4 +172,5 @@ def TransformToArff():
     WriteDataBlock(arff, formatted_data)
     arff.close()
 
-TransformToArff()
+#TransformToArff()
+print(ConvertDate("11/31/2015"))
