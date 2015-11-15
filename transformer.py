@@ -133,13 +133,15 @@ def FormatData(data):
             if attrIndex not in skip_indeces:
                 if attrIndex == 9: # Date
                     date = point[attrIndex].split('/')
-                    year = str(int(date[2]) + 2000)
+                    year = int(date[2])
+                    if year < 2000:
+                        year += 2000
                     if(int(date[0]) < 10):
                         month = "0" + date[0]
                     else:
                         month = date[0]
                     day = date[1]
-                    datastring += year + "-" + month + "-" + day + ","
+                    datastring += str(year) + "-" + month + "-" + day + ","
                 elif attrIndex == 10: # Time
                     datastring += ConvertTime(point[attrIndex]) + ","
                 elif attrIndex == 20: # No comma
