@@ -119,6 +119,20 @@ def ConvertTime(time):
 
     return time
 
+def ConvertDate(date):
+    date = point[attrIndex].split('/')
+    if(int(date[0]) < 10):
+        if(len(date[0]) < 2):
+            month = "0" + date[0]
+        else:
+            month = date[0]
+            day = date[1]
+    converted_date = month + "-" + date
+    if converted_date == "11-31":
+        print(date)
+
+    return converted_date
+
 # Here is where the datapoints are formatted so that WEKA
 # can parse them according to the attributes we defined.
 # list<list<>> -> list<string>
@@ -132,17 +146,7 @@ def FormatData(data):
         for attrIndex in range(len(point)):
             if attrIndex not in skip_indeces:
                 if attrIndex == 9: # Date
-                    date = point[attrIndex].split('/')
-                    #year = int(date[2]) Not using year right now
-                    #if year < 2000:
-                    #    year += 2000
-                    if(int(date[0]) < 10):
-                        if(len(date[0]) < 2):
-                            month = "0" + date[0]
-                    else:
-                        month = date[0]
-                    day = date[1]
-                    datastring += month + "-" + day + ","
+                    datastring += ConvertDate(point[attrIndex]) + ","
                 elif attrIndex == 10: # Time
                     datastring += ConvertTime(point[attrIndex]) + ","
                 elif attrIndex == 20: # No comma
