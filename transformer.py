@@ -65,27 +65,27 @@ def SetToARFFString(s):
 def WriteHeaderBlock(file, headers, uniques):
     init_comments = "%1. Title: Car Crash Data\n%\n%2. Sources: Nicholas Livadas, Oct. 8, 2015\n%\n%3. Authors: Ryan Lisnoff & Derek Brown\n"
     relation = "@RELATION crash\n\n"
-    
+    skip_indeces = [0,1,2,3,4,5,6,7,8,11,15,16,17]
     attr_block = []
 
     # Now we need to make all the different attributes we plan to use
     # Skip QUERYID
-    attr_block.append("@ATTRIBUTE CaseNumber NUMERIC\n")
+    #attr_block.append("@ATTRIBUTE CaseNumber NUMERIC\n")
     # Skip REGN_CNTY_CDE
-    attr_block.append("@ATTRIBUTE Municipality " + SetToARFFString(uniques[3]) + "\n")
+    #attr_block.append("@ATTRIBUTE Municipality " + SetToARFFString(uniques[3]) + "\n")
     # Skip MUNITYPE
     # Skip REF_MRKR
-    attr_block.append("@ATTRIBUTE AtIntersection {Y,N}\n")
-    attr_block.append("@ATTRIBUTE Latitude NUMERIC\n")
-    attr_block.append("@ATTRIBUTE Longitude NUMERIC\n")
+    #attr_block.append("@ATTRIBUTE AtIntersection {Y,N}\n")
+    #attr_block.append("@ATTRIBUTE Latitude NUMERIC\n")
+    #attr_block.append("@ATTRIBUTE Longitude NUMERIC\n")
     attr_block.append("@ATTRIBUTE Date date \"yyyy-MM-dd\"\n")
     attr_block.append("@ATTRIBUTE Time date \"HH:mm\"\n")
-    attr_block.append("@ATTRIBUTE CrashType"+ SetToARFFString(uniques[11]) +"\n")
+    #attr_block.append("@ATTRIBUTE CrashType"+ SetToARFFString(uniques[11]) +"\n")
     attr_block.append("@ATTRIBUTE Injuries NUMERIC\n")
     attr_block.append("@ATTRIBUTE Fatalities NUMERIC\n")
     attr_block.append("@ATTRIBUTE NumVehicles NUMERIC\n")
-    attr_block.append("@ATTRIBUTE AccidentType"+ SetToARFFString(uniques[15]) +"\n")
-    attr_block.append("@ATTRIBUTE CollisionType"+ SetToARFFString(uniques[16]) +"\n")
+    #attr_block.append("@ATTRIBUTE AccidentType"+ SetToARFFString(uniques[15]) +"\n")
+    #attr_block.append("@ATTRIBUTE CollisionType"+ SetToARFFString(uniques[16]) +"\n")
     # Skip TRAF_CNTL
     attr_block.append("@ATTRIBUTE LightCondition"+ SetToARFFString(uniques[18]) +"\n")
     attr_block.append("@ATTRIBUTE WeatherCondition"+ SetToARFFString(uniques[19]) +"\n")
