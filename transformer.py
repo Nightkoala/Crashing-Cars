@@ -109,6 +109,7 @@ def FormatData(data):
     skip_indeces = [0,2,4,5,17]
     numeric_indeces = [1,7,8,12,13,14]
     for point in data:
+        skip_this_point = False
         datastring = ""
         for attrIndex in range(len(point)):
             if attrIndex == 9: # Date
@@ -127,14 +128,18 @@ def FormatData(data):
                     datastring += point[attrIndex] + ","
             elif attrIndex == 20: # No comma
                 datastring += "\"" + point[attrIndex].strip() + "\"\n"
+            elif attrIndex == 3 and point[attrIndex] == "":
+                skip_this_point = True
+                break
             else:
                 if attrIndex not in skip_indeces:
                     if attrIndex in numeric_indeces:
                         datastring += point[attrIndex] + ","
                     else:
                         datastring += "\"" + point[attrIndex] + "\","
-                
-        formatted.append(datastring)
+
+        if not skip_this_point:
+            formatted.append(datastring)
                 
     return formatted
     
