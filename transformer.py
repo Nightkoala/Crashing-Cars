@@ -137,7 +137,8 @@ def FormatData(data):
                     #if year < 2000:
                     #    year += 2000
                     if(int(date[0]) < 10):
-                        month = "0" + date[0]
+                        if(len(date[0]) < 2):
+                            month = "0" + date[0]
                     else:
                         month = date[0]
                     day = date[1]
