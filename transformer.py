@@ -101,6 +101,24 @@ def WriteDataBlock(file, data):
     for datapoint in data:
         file.write(datapoint)
 
+# Either returns the time unchanged, or if it has AM/PM, convert to 24 hour
+def ConvertTime(time):
+    if(time == ""):
+        return "00:00"
+    check = time.split()
+    if(len(check) > 1):
+        hour,minute = check[0].split(':')[0],check[0].split(':')[1]
+        if(check[1] == "AM"):
+            if hour == "12":
+                hour = "00"   
+        else:
+            if hour != "12":
+                hourAsInt = int(hour) + 12
+                hour = str(hourAsInt)
+        return hour + ":" + minute
+
+    return time
+
 # Here is where the datapoints are formatted so that WEKA
 # can parse them according to the attributes we defined.
 # list<list<>> -> list<string>
@@ -122,10 +140,7 @@ def FormatData(data):
                 day = date[1]
                 datastring += year + "-" + month + "-" + day + ","
             elif attrIndex == 10: # Time
-                if point[attrIndex] == "":
-                    datastring += "00:00," # If time wasn't recorded, we will make it midnight.
-                else:
-                    datastring += point[attrIndex] + ","
+                ConvertTime(point[attrIndex]) + ","
             elif attrIndex == 20: # No comma
                 datastring += "\"" + point[attrIndex].strip() + "\"\n"
             elif attrIndex == 3 and point[attrIndex] == "":
