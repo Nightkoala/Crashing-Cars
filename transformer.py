@@ -172,5 +172,4 @@ def TransformToArff():
     WriteDataBlock(arff, formatted_data)
     arff.close()
 
-#TransformToArff()
-print(ConvertDate("11/31/2015"))
+TransformToArff()
