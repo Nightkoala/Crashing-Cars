@@ -33,13 +33,20 @@ def GetHeadersUniqueValuesAndData(write):
     headers = next(f).split(',')
     uniques = [set() for i in range(len(headers))]
     print("Reading in values...")
+    num_lines = 0
+    next_prompt = 1000
     for line in f:
+        if num_lines >= next_prompt:
+            print("Read "+ str(num_lines) +" lines...")
+            next_prompt += 1000
         values = line.split(',')
         data.append(values)
         for valIndex in range(len(values)):
             # Add to set for unique values
             if values[valIndex].strip() != "":
                 uniques[valIndex] = uniques[valIndex].union([values[valIndex].strip()])
+        num_lines += 1
+    print("Reading done! Read in "+ str(num_lines) +" lines.")
     if(write):
         print("Writing out unique values...")
         for uIndex in range(len(uniques)):
@@ -62,10 +69,11 @@ def SetToARFFString(s):
     
 # Writes initial header to ARFF file
 # This includes initial comments, relation and attributes
+# If you plan on skipping an attribute, make sure the @ATTRIBUTE here is commented out
 def WriteHeaderBlock(file, headers, uniques):
     init_comments = "%1. Title: Car Crash Data\n%\n%2. Sources: Nicholas Livadas, Oct. 8, 2015\n%\n%3. Authors: Ryan Lisnoff & Derek Brown\n"
     relation = "@RELATION crash\n\n"
-    skip_indeces = [0,1,2,3,4,5,6,7,8,11,15,16,17]
+    skip_indeces = [0,1,2,3,4,5,6,7,8,11,15,16,17,18]
     attr_block = []
 
     # Now we need to make all the different attributes we plan to use
@@ -83,11 +91,11 @@ def WriteHeaderBlock(file, headers, uniques):
     #attr_block.append("@ATTRIBUTE CrashType"+ SetToARFFString(uniques[11]) +"\n")
     attr_block.append("@ATTRIBUTE Injuries NUMERIC\n")
     attr_block.append("@ATTRIBUTE Fatalities NUMERIC\n")
-    attr_block.append("@ATTRIBUTE NumVehicles NUMERIC\n")
+    #attr_block.append("@ATTRIBUTE NumVehicles NUMERIC\n")
     #attr_block.append("@ATTRIBUTE AccidentType"+ SetToARFFString(uniques[15]) +"\n")
     #attr_block.append("@ATTRIBUTE CollisionType"+ SetToARFFString(uniques[16]) +"\n")
     # Skip TRAF_CNTL
-    attr_block.append("@ATTRIBUTE LightCondition"+ SetToARFFString(uniques[18]) +"\n")
+    #attr_block.append("@ATTRIBUTE LightCondition"+ SetToARFFString(uniques[18]) +"\n")
     attr_block.append("@ATTRIBUTE WeatherCondition"+ SetToARFFString(uniques[19]) +"\n")
     attr_block.append("@ATTRIBUTE SurfaceCondition"+ SetToARFFString(uniques[20]) +"\n")
     
@@ -102,6 +110,7 @@ def WriteDataBlock(file, data):
         file.write(datapoint)
 
 # Either returns the time unchanged, or if it has AM/PM, convert to 24 hour
+# WEKA needs it in format HH:mm
 def ConvertTime(time):
     if(time == ""):
         return "00:00"
@@ -119,6 +128,9 @@ def ConvertTime(time):
 
     return time
 
+# Converts the slash style date into a date we can use
+# Here we drop the year because we're not so interested in it
+# WEKA needs it in form MM:dd
 def ConvertDate(date):
     split_date = date.split('/')
     month = split_date[0]
@@ -134,11 +146,14 @@ def ConvertDate(date):
 
 # Here is where the datapoints are formatted so that WEKA
 # can parse them according to the attributes we defined.
+# Anything in skip_indeces must also be commented out in the @ATTRIBUTE section!
 # list<list<>> -> list<string>
 def FormatData(data):
+    print("Cleaning data...")
     formatted = []
-    skip_indeces = [0,1,2,3,4,5,6,7,8,11,15,16,17]
+    skip_indeces = [0,1,2,3,4,5,6,7,8,11,14,15,16,17,18]
     numeric_indeces = [1,7,8,12,13,14]
+    num_removed = 0
     for point in data:
         skip_this_point = False
         datastring = ""
@@ -152,6 +167,7 @@ def FormatData(data):
                     datastring += "\"" + point[attrIndex].strip() + "\"\n"
                 elif attrIndex == 3 and point[attrIndex] == "":
                     skip_this_point = True
+                    num_removed += 1
                     break
                 else:
                     if attrIndex in numeric_indeces:
@@ -161,15 +177,41 @@ def FormatData(data):
                         
         if not skip_this_point:
             formatted.append(datastring)
-                
+    print("Cleaning done. Removed "+ str(num_removed) + " points. New Total points: "+ str(len(formatted)))    
     return formatted
-    
-def TransformToArff():
-    headers, uniques, datapoints = GetHeadersUniqueValuesAndData(False)
+
+# Writes the formatted data to a new CSV file
+def WriteCleanCSV(data):
+    print("Writing to cleaned CSV file")
+    filename = "cleaned.csv"
+    file = open(filename, "w")
+    headers = ["Date", "Time", "Injuries", "Fatalities", "WeatherCondition", "Surface Condition"]
+    for header_index in range(len(headers)):
+        file.write(headers[header_index])
+        if(header_index == len(headers) - 1):
+            file.write("\n")
+        else:
+            file.write(",")
+
+    for point_index in range(len(data)):
+        file.write(str(data[point_index]))
+
+    file.close()
+    print("Finished writing to cleaned.csv")
+
+def WriteARFF(headers, uniques, formatted_data):
     arff = open("crashes.arff", "w")
     WriteHeaderBlock(arff, headers, uniques)
-    formatted_data = FormatData(datapoints)
     WriteDataBlock(arff, formatted_data)
     arff.close()
-
-TransformToArff()
+    print("Finished writing to crashes.arff...")
+    
+def Main():
+    print("Starting transformer!")
+    headers, uniques, datapoints = GetHeadersUniqueValuesAndData(False)
+    formatted_data = FormatData(datapoints)
+    WriteARFF(headers, uniques, formatted_data)
+    WriteCleanCSV(formatted_data)
+    print("Done!")
+    
+Main()
