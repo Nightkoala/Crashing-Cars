@@ -1,3 +1,4 @@
 Folly: Clusters with time, date and light condition
 - Show visualized cluster, wow doesn't this look awesome? Too bad we don't learn much from it.
 - Obviously dark road/later time would happen more often...
+- Dates had to be given the same year since we don't care about the exact year

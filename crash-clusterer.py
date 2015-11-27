@@ -4,6 +4,7 @@
 import math
 import datetime
 import random
+from collections import Counter
 
 ###############################################################################
 # Represents a single crash, used class instead of a simple list just because
@@ -16,6 +17,7 @@ class Crash:
         self.Injuries = inj
         self.Date = date
         self.Time = time
+        self.NearestPrototypeIX = None
 
     def __str__(self):
         return str(self.Date) + " @ " + str(self.Time) + " w/ " + str(self.Injuries) + " injuries. " + self.WeatherCondition + "," + self.SurfaceCondition + "."
@@ -35,7 +37,7 @@ def CrashDistance(c1, c2):
         score += (50/3)
     if c1.SurfaceCondition == c2.SurfaceCondition:
         score += (50/3)
-    score += (50/3) * (math.fabs(c1.Injuries - c2.Injuries)/ max(c1.Injures, c2.Injuries))
+    score += (50/3) * (math.fabs(c1.Injuries - c2.Injuries)/ max(c1.Injuries, c2.Injuries))
     # Multiply how close the dates are by the max score the dates can achieve
     score += (25) * (1 - (DateDifference(c1.Date, c2.Date) / 182))
     # Do something similar with the time
@@ -45,16 +47,23 @@ def CrashDistance(c1, c2):
 
 ###############################################################################
 # Returns the closest difference between two dates, regardless of year
+# ---
+# "Closest" example: Jan 1, Oct 1 have a difference of 10 months if you walk
+# the calendar in one direction, and 2 months if you go in the other direction.
+# This function will return the 2 month time period in this case.
 ###############################################################################
 def DateDifference(d1, d2):
-    diff = d1-d2
+    # Set them to be the same year, since we don't care about year
+    d1_fixed = datetime.date(2010, d1.month, d1.day)
+    d2_fixed = datetime.date(2010, d2.month, d2.day)
+    diff = d1_fixed-d2_fixed
     if diff.days > 182:    
         max_date = max(d1,d2)
         min_date = min(d1,d2)
         max_date += datetime.timedelta(-365)
         diff = min_date - max_date
 
-    return diff
+    return diff.days
 
 ###############################################################################
 # Returns the difference between two times in minutes
@@ -64,6 +73,69 @@ def TimeDifference(t1, t2):
     max_t = max(t1,t2)
     min_t = min(t1,t2)
     return ((max_t.hour * 60) + max_t.minute) - ((min_t.hour * 60) + min_t.minute)
+
+###############################################################################
+# Computes the "Average" crash within a cluster
+# List<Crash> -> Crash
+###############################################################################
+def ComputeClusterMean(clust):
+    weather = Counter([x.WeatherCondition for x in clust]).most_common(1)
+    surface = Counter([x.SurfaceCondition for x in clust]).most_common(1)
+    injuries =  math.ceil(sum([x.Injuries for x in clust]) / len(clust))
+    date = datetime.date.fromordinal(math.ciel(sum([x.Date.toordinal() for x in clust]) / len(clust)))
+    time_in_mins = math.ciel(((sum([x.Time.hour for x in clust]) * 60) + (sum([x.Time.minute for x in clust]))) / len(clust))
+    time = datetime.time(math.floor(time_in_mins / 60), time_in_mins % 60)
+    mean = Crash(weather, surface, injuries, date, time)
+
+    return mean
+
+###############################################################################
+# Computes the prototypes for this clustering
+# ListL<List<Crash>> -> List<Crash>
+###############################################################################
+def FindPrototypesForClustering(clustering):
+    prototypes = []
+    for cluster in clustering:
+        prototype = ComputeClusterMean(cluster)
+        prototypes.append(prototype)
+
+    return prototypes
+
+###############################################################################
+# Reads in crashes from file
+# ASSUMES: csv is in format: Date,Time,Injuries,Fatalities,WeatherCondition,Surface Condition
+# String -> List<Crash>
+###############################################################################
+def ReadInCrashes(filename):
+    file = open(filename)
+    file.__next__() # toss out the header
+    crashes = []
+    for line in file:
+        data = line.split(',')
+        date = datetime.date(2010, int(data[0].split('-')[0]), int(data[0].split('-')[1]))
+        time = datetime.time(int(data[1].split(':')[0]), int(data[1].split(':')[1]))
+        injuries = int(data[2])
+        weat_con = data[4]
+        surf_con = data[5]
+        crash  = Crash(weat_con, surf_con, injuries, date, time)
+        crashes.append(crash)
+
+    return crashes
+
+###############################################################################
+# Computes the SSE of this clustering by looking at each crash, figuring the
+# distance between the crash and its cluster prototype, then adding the square
+# of that to a sum.
+# List<Crash> * List<Crash> -> int
+###############################################################################
+def ComputeSSE(crashes, prototypes)
+    sse = 0
+    for crash in crashes:
+        prototype = prototypes[crash.NearestPrototypeIX]
+        dist = CrashDistance(crash, prototype)
+        sse += (dist ** 2)
+
+    return sse
 
 ###############################################################################
 # Returns k many random crash prototypes
@@ -107,3 +179,4 @@ def PickStartingPrototypes(k):
 p = PickStartingPrototypes(2)
 for c in p:
     print(c)
+print(CrashDistance(p[0],p[1]))
