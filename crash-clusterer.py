@@ -114,7 +114,7 @@ def ReadInCrashes(filename):
         data = line.split(',')
         date = datetime.date(2010, int(data[0].split('-')[0]), int(data[0].split('-')[1]))
         time = datetime.time(int(data[1].split(':')[0]), int(data[1].split(':')[1]))
-        injuries = int(data[2])
+        injuries = float(data[2])
         weat_con = data[4]
         surf_con = data[5]
         crash  = Crash(weat_con, surf_con, injuries, date, time)
@@ -123,12 +123,47 @@ def ReadInCrashes(filename):
     return crashes
 
 ###############################################################################
+# Assigns each crash a nearest prototype from the list of prototypes
+# List<Crash> * List<Crash> -> List<Crash>
+###############################################################################
+def AssignNearestPrototypes(crashes, prototypes):
+    for crash in crashes:
+        closest_prototype_ix = None
+        closest_prototype_distance = float('inf')
+        for prototype_ix in range(len(prototypes)):
+            dist_to_prototype = CrashDistance(crash, prototypes[prototype_ix])
+            if (dist_to_prototype < closest_prototype_distance):
+                closest_prototype_ix = prototype_ix
+                closest_prototype_distance = dist_to_prototype
+
+        crash.NearestPrototypeIX = closest_prototype_ix
+
+    return crashes
+
+###############################################################################
+# Recursively goes through the K-Means algorithm on a list of crashes until:
+#   The SSE stays the same or gets worse, or
+#   The SSE doesn't decrease by at least a certain amount
+# List<Crash> * List<Crash>  * int -> List<Crash> , List<Crash>
+###############################################################################
+def CrashKMeans(crashes, prototypes, previous_sse):
+
+    crashes = AssignNearestPrototypes(crashes, prototypes)
+    cur_sse = ComputeSSE(crashes, prototypes)
+
+    if cur_sse >= previous_sse or previous_sse - cur_sse < 1000:
+        return crashes, prototypes
+
+    new_prototypes = FindPrototypesForClustering(crashes)
+    return CrashKMeans(crashes, new_prototypes, cur_sse)
+
+###############################################################################
 # Computes the SSE of this clustering by looking at each crash, figuring the
 # distance between the crash and its cluster prototype, then adding the square
 # of that to a sum.
 # List<Crash> * List<Crash> -> int
 ###############################################################################
-def ComputeSSE(crashes, prototypes)
+def ComputeSSE(crashes, prototypes):
     sse = 0
     for crash in crashes:
         prototype = prototypes[crash.NearestPrototypeIX]
@@ -175,8 +210,11 @@ def PickStartingPrototypes(k):
 
     return prototypes
 
+def main():
+    crashes = ReadInCrashes("cleaned.csv")
+    initial_prototypes = PickStartingPrototypes(2)
+    clustering, prototypes = CrashKMeans(crashes, initial_prototypes, float('inf'))
+    for prototype in prototypes:
+        print(prototype)
 
-p = PickStartingPrototypes(2)
-for c in p:
-    print(c)
-print(CrashDistance(p[0],p[1]))
+main()
