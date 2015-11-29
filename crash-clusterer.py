@@ -5,6 +5,7 @@ import math
 import datetime
 import random
 from collections import Counter
+import matplotlib.pyplot as plt
 
 ###############################################################################
 # Represents a single crash, used class instead of a simple list just because
@@ -78,12 +79,15 @@ def TimeDifference(t1, t2):
 # Computes the "Average" crash within a cluster
 # List<Crash> -> Crash
 ###############################################################################
-def ComputeClusterMean(clust):
-    weather = Counter([x.WeatherCondition for x in clust]).most_common(1)
-    surface = Counter([x.SurfaceCondition for x in clust]).most_common(1)
+def ComputeClusterMean(clust, CurrentCenter):
+    if clust == []:
+        return CurrentCenter
+    
+    weather = Counter([x.WeatherCondition for x in clust]).most_common(1)[0][0]
+    surface = Counter([x.SurfaceCondition for x in clust]).most_common(1)[0][0]
     injuries =  math.ceil(sum([x.Injuries for x in clust]) / len(clust))
-    date = datetime.date.fromordinal(math.ciel(sum([x.Date.toordinal() for x in clust]) / len(clust)))
-    time_in_mins = math.ciel(((sum([x.Time.hour for x in clust]) * 60) + (sum([x.Time.minute for x in clust]))) / len(clust))
+    date = datetime.date.fromordinal(math.ceil(sum([x.Date.toordinal() for x in clust]) / len(clust)))
+    time_in_mins = math.ceil(((sum([x.Time.hour for x in clust]) * 60) + (sum([x.Time.minute for x in clust]))) / len(clust))
     time = datetime.time(math.floor(time_in_mins / 60), time_in_mins % 60)
     mean = Crash(weather, surface, injuries, date, time)
 
@@ -93,10 +97,11 @@ def ComputeClusterMean(clust):
 # Computes the prototypes for this clustering
 # ListL<List<Crash>> -> List<Crash>
 ###############################################################################
-def FindPrototypesForClustering(clustering):
+def FindPrototypesForClustering(clustering, OriginalPrototypes):
     prototypes = []
-    for cluster in clustering:
-        prototype = ComputeClusterMean(cluster)
+    for i in range(len(clustering)):
+        cluster = clustering[i]
+        prototype = ComputeClusterMean(cluster, OriginalPrototypes[i])
         prototypes.append(prototype)
 
     return prototypes
@@ -140,7 +145,7 @@ def AssignNearestPrototypes(crashes, prototypes):
 
     return crashes
 
-###############################################################################
+
 # Recursively goes through the K-Means algorithm on a list of crashes until:
 #   The SSE stays the same or gets worse, or
 #   The SSE doesn't decrease by at least a certain amount
@@ -153,8 +158,10 @@ def CrashKMeans(crashes, prototypes, previous_sse):
 
     if cur_sse >= previous_sse or previous_sse - cur_sse < 1000:
         return crashes, prototypes
+    
+    clusters = SeparateClusters(crashes, len(prototypes))
 
-    new_prototypes = FindPrototypesForClustering(crashes)
+    new_prototypes = FindPrototypesForClustering(clusters, prototypes)
     return CrashKMeans(crashes, new_prototypes, cur_sse)
 
 ###############################################################################
@@ -178,7 +185,7 @@ def ComputeSSE(crashes, prototypes):
 def PickStartingPrototypes(k):
 
     # Seeding the random number generator
-    random.seed("tingo")
+    random.seed(None)
 
     # Note: OTHER and FOG/SMOKE/SMOG are omitted because these occur very rarely
     weat_cons = ["CLOUDY","CLEAR","RAIN","SLEET/HAIL/FREEZING RAIN","UNKNOWN", "SNOW"]
@@ -209,6 +216,48 @@ def PickStartingPrototypes(k):
         prototypes.append(c)
 
     return prototypes
+###############################################################################
+# This takes the list of crashes that have been assigned to a cluster and
+# creates a List<List<Crash>> that separates out the different crashes to the
+# appropriate cluster.
+# List<Crash> -> List<List<Crash>
+###############################################################################
+def SeparateClusters(Crashes, K):
+    clusters = []
+    for i in range(K):
+        clusters.append([])
+    
+    for crash in Crashes:
+        clusters[crash.NearestPrototypeIX].append(crash)
+        
+    return clusters
+
+###############################################################################
+# Graph the results from K-Means algorithm
+# List<List<Crash>> -> None
+###############################################################################
+def GenerateGraph(Crashes):
+    scatters = []
+    colors = {0: 'r', 1: 'g'}
+    for i in range(len(Crashes)):
+        cluster = Crashes[i]
+        x = []  # Date
+        y = []  # Time
+        
+        for crash in cluster:
+            x.append(crash.Date.toordinal())
+            t = crash.Time.isoformat()
+            (h, m, s) = t.split(":")
+            timeNum = int(h) * 3600 + int(m) * 60 + int(s)
+            y.append(timeNum)
+            
+        scatters.append(plt.scatter(x, y, c = colors[i]))
+        
+    plt.title("Clustered Crash Data")
+    plt.xlabel("Date")
+    plt.ylabel("Time")
+
+    plt.show()
 
 def main():
     crashes = ReadInCrashes("cleaned.csv")
@@ -216,5 +265,8 @@ def main():
     clustering, prototypes = CrashKMeans(crashes, initial_prototypes, float('inf'))
     for prototype in prototypes:
         print(prototype)
+        
+    clusters = SeparateClusters(clustering, len(initial_prototypes))    
+    GenerateGraph(clusters)
 
 main()
