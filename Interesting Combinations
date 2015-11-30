@@ -1,0 +1,9 @@
+DISTANCE_VERSION = 1
+SEED = None
+K = 2
+Our initial Clustering
+-------------------------------------------------------------------------------
+DISTANCE_VERSION = 2
+SEED = "thisisaseed"
+K = 2
+Super obvious split down the middle of the day

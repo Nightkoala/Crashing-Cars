@@ -6,7 +6,12 @@ import datetime
 import random
 from collections import Counter
 import matplotlib.pyplot as plt
-
+# Which distance metric version to use for the crashes
+DISTANCE_VERSION = 1
+# Number of clusters to find
+K = 2
+# Seed for random num generator, keeps our random numbers consistent
+SEED = "tingo"
 ###############################################################################
 # Represents a single crash, used class instead of a simple list just because
 # it makes the code much easier to read.
@@ -21,9 +26,20 @@ class Crash:
         self.NearestPrototypeIX = None
 
     def __str__(self):
-        return str(self.Date) + " @ " + str(self.Time) + " w/ " + str(self.Injuries) + " injuries. " + self.WeatherCondition + "," + self.SurfaceCondition + "."
+        return str(self.Date) + " @ " + str(self.Time) + " w/ " + str(self.Injuries) + " injuries. " + self.WeatherCondition + "," + self.SurfaceCondition
 
 ###############################################################################
+# Switches the distance metric depending on the version number
+###############################################################################
+def CrashDistance(version, c1, c2):
+    if version == 1:
+        return CrashDistanceV1(c1,c2)
+    elif version == 2:
+        return CrashDistanceV2(c1,c2)
+    elif version == 3:
+        return CrashDistanceV3(c1,c2)
+###############################################################################
+# VERSION 1
 # Returns the "distance" between two crashes.
 #       0 if completely the same, 1 if completely different
 # This is a measurement of similarity between crashes.
@@ -32,7 +48,7 @@ class Crash:
 # Date and time are 25% of the score each,
 # then the other three constitute the rest of the similarity measurement.
 ###############################################################################
-def CrashDistance(c1, c2):
+def CrashDistanceV1(c1, c2):
     score = 0
     if c1.WeatherCondition == c2.WeatherCondition:
         score += (50/3)
@@ -43,6 +59,39 @@ def CrashDistance(c1, c2):
     score += (25) * (1 - (DateDifference(c1.Date, c2.Date) / 182))
     # Do something similar with the time
     score += (25) * (1 - (TimeDifference(c1.Time, c2.Time) / 1439))
+    # Divide by 100, get a measure of SIMILARITY. Thus, need to subtract from 1.
+    return 1 - (score / 100)
+
+###############################################################################
+# VERSION 2
+# Only looks at numeric values, being injuries, date, and time
+# Weighs Date, Time and Injuries equally
+###############################################################################
+def CrashDistanceV2(c1, c2):
+    score = 0
+    score += (100/3) * (math.fabs(c1.Injuries - c2.Injuries)/ max(c1.Injuries, c2.Injuries))
+    # Multiply how close the dates are by the max score the dates can achieve
+    score += (100/3) * (1 - (DateDifference(c1.Date, c2.Date) / 182))
+    # Do something similar with the time
+    score += (100/3) * (1 - (TimeDifference(c1.Time, c2.Time) / 1439))
+    # Divide by 100, get a measure of SIMILARITY. Thus, need to subtract from 1.
+    return 1 - (score / 100)
+
+###############################################################################
+# VERSION 2
+# Completely disregards Date and Time
+# Weighs Injuries, Surface Condition and Weather Condition equally
+###############################################################################
+def CrashDistanceV3(c1, c2):
+    score = 0
+    if c1.WeatherCondition == c2.WeatherCondition:
+        score += (100/3)
+    if c1.SurfaceCondition == c2.SurfaceCondition:
+        score += (100/3)
+    if(c1.Injuries == c2.Injuries):
+        score += (100/3)
+    else:
+        score += (100/3) * (math.fabs(c1.Injuries - c2.Injuries)/ max(c1.Injuries, c2.Injuries))
     # Divide by 100, get a measure of SIMILARITY. Thus, need to subtract from 1.
     return 1 - (score / 100)
 
@@ -136,7 +185,7 @@ def AssignNearestPrototypes(crashes, prototypes):
         closest_prototype_ix = None
         closest_prototype_distance = float('inf')
         for prototype_ix in range(len(prototypes)):
-            dist_to_prototype = CrashDistance(crash, prototypes[prototype_ix])
+            dist_to_prototype = CrashDistance(DISTANCE_VERSION,crash, prototypes[prototype_ix])
             if (dist_to_prototype < closest_prototype_distance):
                 closest_prototype_ix = prototype_ix
                 closest_prototype_distance = dist_to_prototype
@@ -174,7 +223,7 @@ def ComputeSSE(crashes, prototypes):
     sse = 0
     for crash in crashes:
         prototype = prototypes[crash.NearestPrototypeIX]
-        dist = CrashDistance(crash, prototype)
+        dist = CrashDistance(DISTANCE_VERSION,crash, prototype)
         sse += (dist ** 2)
 
     return sse
@@ -185,7 +234,7 @@ def ComputeSSE(crashes, prototypes):
 def PickStartingPrototypes(k):
 
     # Seeding the random number generator
-    random.seed(None)
+    random.seed(SEED)
 
     # Note: OTHER and FOG/SMOKE/SMOG are omitted because these occur very rarely
     weat_cons = ["CLOUDY","CLEAR","RAIN","SLEET/HAIL/FREEZING RAIN","UNKNOWN", "SNOW"]
@@ -238,7 +287,7 @@ def SeparateClusters(Crashes, K):
 ###############################################################################
 def GenerateGraph(Crashes):
     scatters = []
-    colors = {0: 'r', 1: 'g'}
+    colors = {0: 'r', 1: 'b', 2: 'g', 3: 'y'}
     for i in range(len(Crashes)):
         cluster = Crashes[i]
         x = []  # Date
@@ -261,12 +310,17 @@ def GenerateGraph(Crashes):
 
 def main():
     crashes = ReadInCrashes("cleaned.csv")
-    initial_prototypes = PickStartingPrototypes(2)
+    initial_prototypes = PickStartingPrototypes(K)
     clustering, prototypes = CrashKMeans(crashes, initial_prototypes, float('inf'))
-    for prototype in prototypes:
-        print(prototype)
-        
-    clusters = SeparateClusters(clustering, len(initial_prototypes))    
+
+    clusters = SeparateClusters(clustering, len(initial_prototypes))
+
+    for prototype_ix in range(len(prototypes)):
+        print("Cluster " + str(prototype_ix) + ", " + str(len(clusters[prototype_ix])) + " crashes, with prototype:")
+        print(prototypes[prototype_ix])
+
+
+
     GenerateGraph(clusters)
 
 main()
